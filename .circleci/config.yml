@@ -1,0 +1,50 @@
+version: 2.1
+
+parameters:
+  # This is the parameter for conditional switching
+  do-deploy:
+    type: boolean
+    default: false
+
+jobs:
+  build:
+    docker:
+      - image: alpine
+    steps:
+      - run: exit
+      - when:
+          condition: << pipeline.parameters.do-deploy >>
+          # Run these steps if and only if pipeline.parameters.do-deploy === true
+          steps:
+            - run: echo "Do Deploy!"
+
+  deploy:
+    docker:
+      - image: alpine
+    steps:
+      # Run steps in this job if and only if pipeline.parameters.do-deploy === true
+      - when:
+          condition: << pipeline.parameters.do-deploy >>
+          steps:
+            - run: echo "Deploying!!!"
+      # Insert this "dummy" run as the `when` block above resolves into an empty object and CircleCI does not allow empty jobs
+      - run: exit
+
+  alert:
+    docker:
+      - image: alpine
+    steps:
+      - run: exit
+
+workflows:
+  build-deploy:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
+  alert-deploy:
+    # Run this workflow if and only if pipeline.parameters.do-deploy === true
+    when: << pipeline.parameters.do-deploy >>
+    jobs:
+      - alert
